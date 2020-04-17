@@ -7,7 +7,9 @@
 //  <last-date>2018-01-12 15:31</last-date>
 // -----------------------------------------------------------------------
 
-using Microsoft.Extensions.Logging;
+using System;
+
+using OSharp.Dependency;
 
 
 namespace OSharp.EventBuses.Internal
@@ -20,8 +22,8 @@ namespace OSharp.EventBuses.Internal
         /// <summary>
         /// 初始化一个<see cref="PassThroughEventBus"/>类型的新实例
         /// </summary>
-        public PassThroughEventBus(IEventStore eventStore, ILogger<PassThroughEventBus> logger)
-            : base(eventStore, logger)
+        public PassThroughEventBus(IHybridServiceScopeFactory serviceScopeFactory, IServiceProvider serviceProvider)
+            : base(serviceScopeFactory, serviceProvider)
         { }
     }
 }

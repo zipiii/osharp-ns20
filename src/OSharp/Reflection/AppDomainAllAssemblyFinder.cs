@@ -7,7 +7,6 @@
 //  <last-date>2017-08-15 23:33</last-date>
 // -----------------------------------------------------------------------
 
-using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -16,7 +15,6 @@ using System.Reflection;
 using Microsoft.Extensions.DependencyModel;
 
 using OSharp.Collections;
-using OSharp.Dependency;
 using OSharp.Finders;
 
 namespace OSharp.Reflection
@@ -24,7 +22,7 @@ namespace OSharp.Reflection
     /// <summary>
     /// 应用程序目录程序集查找器
     /// </summary>
-    public class AppDomainAllAssemblyFinder : FinderBase<Assembly>, IAllAssemblyFinder, ISingletonDependency
+    public class AppDomainAllAssemblyFinder : FinderBase<Assembly>, IAllAssemblyFinder
     {
         private readonly bool _filterNetAssembly;
 
@@ -44,25 +42,28 @@ namespace OSharp.Reflection
         {
             string[] filters =
             {
-                "System",
-                "Microsoft",
+                "mscorlib",
                 "netstandard",
                 "dotnet",
+                "api-ms-win-core",
+                "runtime.",
+                "System",
+                "Microsoft",
                 "Window",
-                "mscorlib"
             };
             DependencyContext context = DependencyContext.Default;
             if (context != null)
             {
                 List<string> names = new List<string>();
-                string[] dllNames = context.CompileLibraries.SelectMany(m => m.Assemblies).Distinct().Select(m => m.Replace(".dll", "")).ToArray();
+                string[] dllNames = context.CompileLibraries.SelectMany(m => m.Assemblies).Distinct().Select(m => m.Replace(".dll", ""))
+                    .OrderBy(m => m).ToArray();
                 if (dllNames.Length > 0)
                 {
                     names = (from name in dllNames
                              let i = name.LastIndexOf('/') + 1
                              select name.Substring(i, name.Length - i)).Distinct()
                         .WhereIf(name => !filters.Any(name.StartsWith), _filterNetAssembly)
-                        .ToList();
+                        .OrderBy(m => m).ToList();
                 }
                 else
                 {
@@ -95,16 +96,12 @@ namespace OSharp.Reflection
             }
 
             //遍历文件夹的方式，用于传统.netfx
-            string path = AppDomain.CurrentDomain.BaseDirectory;
+            string path = Directory.GetCurrentDirectory();
             string[] files = Directory.GetFiles(path, "*.dll", SearchOption.TopDirectoryOnly)
                 .Concat(Directory.GetFiles(path, "*.exe", SearchOption.TopDirectoryOnly))
                 .ToArray();
-            if (_filterNetAssembly)
-            {
-                string[] files1 = files;
-                files = files.WhereIf(m => files1.Any(n => m.StartsWith(n, StringComparison.OrdinalIgnoreCase)), _filterNetAssembly).ToArray();
-            }
-            return files.Select(Assembly.LoadFrom).ToArray();
+
+            return files.Where(file => filters.All(token => Path.GetFileName(file)?.StartsWith(token) != true)).Select(Assembly.LoadFrom).ToArray();
         }
 
         private static Assembly[] LoadFiles(IEnumerable<string> files)

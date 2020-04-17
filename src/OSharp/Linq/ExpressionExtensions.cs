@@ -11,7 +11,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 
-using OSharp.Extensions;
+using OSharp.Data;
 
 
 namespace OSharp.Linq
@@ -31,9 +31,10 @@ namespace OSharp.Linq
         /// <returns>组合后的表达式</returns>
         public static Expression<T> Compose<T>(this Expression<T> first, Expression<T> second, Func<Expression, Expression, Expression> merge)
         {
-            first.CheckNotNull("first");
-            second.CheckNotNull("second");
-            merge.CheckNotNull("merge");
+            Check.NotNull(first, nameof(first));
+            Check.NotNull(second, nameof(second));
+            Check.NotNull(merge, nameof(merge));
+            
             Dictionary<ParameterExpression, ParameterExpression> map =
                 first.Parameters.Select((f, i) => new { f, s = second.Parameters[i] }).ToDictionary(p => p.s, p => p.f);
             Expression secondBody = ParameterRebinder.ReplaceParameters(map, second.Body);
@@ -46,12 +47,13 @@ namespace OSharp.Linq
         /// <typeparam name="T">表达式的主实体类型</typeparam>
         /// <param name="first">第一个Expression表达式</param>
         /// <param name="second">要组合的Expression表达式</param>
+        /// <param name="ifExp">判断条件表达式，当此条件为true时，才执行组合</param>
         /// <returns>组合后的表达式</returns>
-        public static Expression<Func<T, bool>> And<T>(this Expression<Func<T, bool>> first, Expression<Func<T, bool>> second)
+        public static Expression<Func<T, bool>> And<T>(this Expression<Func<T, bool>> first, Expression<Func<T, bool>> second, bool ifExp = true)
         {
-            first.CheckNotNull("first");
-            second.CheckNotNull("second");
-            return first.Compose(second, Expression.AndAlso);
+            Check.NotNull(first, nameof(first));
+            Check.NotNull(second, nameof(second));
+            return ifExp ? first.Compose(second, Expression.AndAlso) : first;
         }
 
         /// <summary>
@@ -60,14 +62,15 @@ namespace OSharp.Linq
         /// <typeparam name="T">表达式的主实体类型</typeparam>
         /// <param name="first">第一个Expression表达式</param>
         /// <param name="second">要组合的Expression表达式</param>
+        /// <param name="ifExp">判断条件表达式，当此条件为true时，才执行组合</param>
         /// <returns>组合后的表达式</returns>
-        public static Expression<Func<T, bool>> Or<T>(this Expression<Func<T, bool>> first, Expression<Func<T, bool>> second)
+        public static Expression<Func<T, bool>> Or<T>(this Expression<Func<T, bool>> first, Expression<Func<T, bool>> second, bool ifExp = true)
         {
-            first.CheckNotNull("first");
-            second.CheckNotNull("second");
-            return first.Compose(second, Expression.OrElse);
+            Check.NotNull(first, nameof(first));
+            Check.NotNull(second, nameof(second));
+            return ifExp ? first.Compose(second, Expression.OrElse) : first;
         }
-
+        
 
         private class ParameterRebinder : ExpressionVisitor
         {

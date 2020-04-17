@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
-using Microsoft.Extensions.DependencyInjection;
-
-using OSharp.Core.Options;
+﻿using Microsoft.Extensions.DependencyInjection;
 
 using Shouldly;
 
@@ -19,17 +13,17 @@ namespace OSharp.Dependency.Tests
         public void Ignore_Test()
         {
             IServiceCollection services = new ServiceCollection();
-            IAppServiceAdder adder = new AppServiceAdder(new AppServiceScanOptions());
-            services = adder.AddServices(services);
+            DependencyPack pack = new DependencyPack();
+            services = pack.AddServices(services);
 
             services.ShouldContain(m => m.ServiceType == typeof(ITestContract));
-            services.ShouldNotContain(m => m.ServiceType == typeof(IIgoreContract));
+            services.ShouldNotContain(m => m.ServiceType == typeof(IIgnoreContract));
         }
 
         [IgnoreDependency]
-        private interface IIgoreContract { }
+        private interface IIgnoreContract { }
 
-        private interface ITestContract : IIgoreContract { }
+        private interface ITestContract : IIgnoreContract { }
 
         private class TestService : ITestContract, ITransientDependency { }
     }

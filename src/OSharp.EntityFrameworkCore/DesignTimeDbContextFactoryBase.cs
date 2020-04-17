@@ -29,10 +29,18 @@ namespace OSharp.Entity
         public virtual TDbContext CreateDbContext(string[] args)
         {
             string connString = GetConnectionString();
-            IEntityConfigurationTypeFinder typeFinder = GetEntityConfigurationTypeFinder();
-            DbContextOptionsBuilder builder = new DbContextOptionsBuilder<DefaultDbContext>();
+            if (connString == null)
+            {
+                return null;
+            }
+            IEntityManager entityManager = GetEntityManager();
+            DbContextOptionsBuilder builder = new DbContextOptionsBuilder<TDbContext>();
+            if (LazyLoadingProxiesEnabled())
+            {
+                builder.UseLazyLoadingProxies();
+            }
             builder = UseSql(builder, connString);
-            return (TDbContext)Activator.CreateInstance(typeof(TDbContext), builder.Options, typeFinder);
+            return (TDbContext)Activator.CreateInstance(typeof(TDbContext), builder.Options, entityManager, null);
         }
 
         /// <summary>
@@ -41,10 +49,16 @@ namespace OSharp.Entity
         public abstract string GetConnectionString();
 
         /// <summary>
-        /// 重写以获取数据实体类配置类型查找器
+        /// 重写以获取数据实体管理器
         /// </summary>
         /// <returns></returns>
-        public abstract IEntityConfigurationTypeFinder GetEntityConfigurationTypeFinder();
+        public abstract IEntityManager GetEntityManager();
+
+        /// <summary>
+        /// 重写以获取是否开启延迟加载代理特性
+        /// </summary>
+        /// <returns></returns>
+        public abstract bool LazyLoadingProxiesEnabled();
 
         /// <summary>
         /// 重写以实现数据上下文选项构建器加载数据库驱动程序

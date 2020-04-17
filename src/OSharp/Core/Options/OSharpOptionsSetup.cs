@@ -12,9 +12,9 @@ using System.Linq;
 
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Options;
-
 using OSharp.Entity;
 using OSharp.Exceptions;
+using OSharp.Extensions;
 
 
 namespace OSharp.Core.Options
@@ -22,32 +22,44 @@ namespace OSharp.Core.Options
     /// <summary>
     /// OSharp配置选项创建器
     /// </summary>
-    public class OSharpOptionsSetup : IConfigureOptions<OSharpOptions>
+    public class OsharpOptionsSetup : IConfigureOptions<OsharpOptions>
     {
         private readonly IConfiguration _configuration;
 
         /// <summary>
-        /// 初始化一个<see cref="OSharpOptionsSetup"/>类型的新实例
+        /// 初始化一个<see cref="OsharpOptionsSetup"/>类型的新实例
         /// </summary>
-        public OSharpOptionsSetup(IConfiguration configuration)
+        public OsharpOptionsSetup(IConfiguration configuration)
         {
             _configuration = configuration;
         }
 
         /// <summary>Invoked to configure a TOptions instance.</summary>
         /// <param name="options">The options instance to configure.</param>
-        public void Configure(OSharpOptions options)
+        public void Configure(OsharpOptions options)
         {
-            SetDbContextOptionses(options);
+            SetDbContextOptions(options);
+
+            IConfigurationSection section;
+            //OAuth2
+            section = _configuration.GetSection("OSharp:OAuth2");
+            IDictionary<string, OAuth2Options> dict = section.Get<Dictionary<string, OAuth2Options>>();
+            if (dict != null)
+            {
+                foreach (KeyValuePair<string, OAuth2Options> item in dict)
+                {
+                    options.OAuth2S.Add(item.Key, item.Value);
+                }
+            }
 
             //MailSender
-            IConfigurationSection section = _configuration.GetSection("OSharp:MailSender");
+            section = _configuration.GetSection("OSharp:MailSender");
             MailSenderOptions sender = section.Get<MailSenderOptions>();
             if (sender != null)
             {
-                if (sender.SenderPassword == null)
+                if (sender.Password == null)
                 {
-                    sender.SenderPassword = _configuration["MailSenderPassword"];
+                    sender.Password = _configuration["OSharp:MailSender:Password"];
                 }
                 options.MailSender = sender;
             }
@@ -59,9 +71,41 @@ namespace OSharp.Core.Options
             {
                 if (jwt.Secret == null)
                 {
-                    jwt.Secret = _configuration["JwtSecret"];
+                    jwt.Secret = _configuration["OSharp:Jwt:Secret"];
                 }
                 options.Jwt = jwt;
+            }
+
+            // RedisOptions
+            section = _configuration.GetSection("OSharp:Redis");
+            RedisOptions redis = section.Get<RedisOptions>();
+            if (redis != null)
+            {
+                if (redis.Configuration.IsMissing())
+                {
+                    throw new OsharpException("配置文件中Redis节点的Configuration不能为空");
+                }
+                options.Redis = redis;
+            }
+
+            // SwaggerOptions
+            section = _configuration.GetSection("OSharp:Swagger");
+            SwaggerOptions swagger = section.Get<SwaggerOptions>();
+            if (swagger != null)
+            {
+                if (swagger.Url.IsMissing())
+                {
+                    throw new OsharpException("配置文件中Swagger节点的Url不能为空");
+                }
+                options.Swagger = swagger;
+            }
+
+            // HttpEncrypt
+            section = _configuration.GetSection("OSharp:HttpEncrypt");
+            HttpEncryptOptions httpEncrypt = section.Get<HttpEncryptOptions>();
+            if (httpEncrypt != null)
+            {
+                options.HttpEncrypt = httpEncrypt;
             }
         }
 
@@ -71,10 +115,10 @@ namespace OSharp.Core.Options
         /// 保证同一上下文类型只有一个配置节点
         /// </summary>
         /// <param name="options"></param>
-        private void SetDbContextOptionses(OSharpOptions options)
+        private void SetDbContextOptions(OsharpOptions options)
         {
             IConfigurationSection section = _configuration.GetSection("OSharp:DbContexts");
-            IDictionary<string, OSharpDbContextOptions> dict = section.Get<Dictionary<string, OSharpDbContextOptions>>();
+            IDictionary<string, OsharpDbContextOptions> dict = section.Get<Dictionary<string, OsharpDbContextOptions>>();
             if (dict == null || dict.Count == 0)
             {
                 string connectionString = _configuration["ConnectionStrings:DefaultDbContext"];
@@ -82,13 +126,13 @@ namespace OSharp.Core.Options
                 {
                     return;
                 }
-                OSharpDbContextOptions dbContextOptions = new OSharpDbContextOptions()
+                OsharpDbContextOptions dbContextOptions = new OsharpDbContextOptions()
                 {
                     DbContextTypeName = "OSharp.Entity.DefaultDbContext,OSharp.EntityFrameworkCore",
                     ConnectionString = connectionString,
                     DatabaseType = DatabaseType.SqlServer
                 };
-                options.DbContextOptionses.Add("DefaultDbContext", dbContextOptions);
+                options.DbContexts.Add("DefaultDbContext", dbContextOptions);
                 return;
             }
             var repeated = dict.Values.GroupBy(m => m.DbContextType).FirstOrDefault(m => m.Count() > 1);
@@ -97,9 +141,9 @@ namespace OSharp.Core.Options
                 throw new OsharpException($"数据上下文配置中存在多个配置节点指向同一个上下文类型：{repeated.First().DbContextTypeName}");
             }
 
-            foreach (KeyValuePair<string, OSharpDbContextOptions> pair in dict)
+            foreach (KeyValuePair<string, OsharpDbContextOptions> pair in dict)
             {
-                options.DbContextOptionses.Add(pair.Key, pair.Value);
+                options.DbContexts.Add(pair.Key, pair.Value);
             }
         }
     }

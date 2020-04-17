@@ -14,8 +14,6 @@ using System.IO;
 using System.Linq;
 using System.Runtime.Serialization.Formatters.Binary;
 
-using Newtonsoft.Json;
-
 using OSharp.Reflection;
 
 
@@ -154,7 +152,7 @@ namespace OSharp.Extensions
                     expando.Add(property.Name, val);
                 }
             }
-            return expando as ExpandoObject;
+            return (ExpandoObject)expando;
         }
 
         /// <summary>

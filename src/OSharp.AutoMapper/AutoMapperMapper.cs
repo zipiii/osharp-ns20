@@ -24,6 +24,18 @@ namespace OSharp.AutoMapper
     /// </summary>
     public class AutoMapperMapper : IMapper
     {
+        private readonly MapperConfiguration _configuration;
+        private readonly global::AutoMapper.IMapper _mapper;
+
+        /// <summary>
+        /// 初始化一个<see cref="AutoMapperMapper"/>类型的新实例
+        /// </summary>
+        public AutoMapperMapper(MapperConfiguration configuration)
+        {
+            _configuration = configuration;
+            _mapper = configuration.CreateMapper();
+        }
+
         /// <summary>
         /// 将对象映射为指定类型
         /// </summary>
@@ -32,7 +44,7 @@ namespace OSharp.AutoMapper
         /// <returns>目标类型的对象</returns>
         public TTarget MapTo<TTarget>(object source)
         {
-            return Mapper.Map<TTarget>(source);
+            return _mapper.Map<TTarget>(source);
         }
 
         /// <summary>
@@ -45,7 +57,7 @@ namespace OSharp.AutoMapper
         /// <returns>更新后的目标类型对象</returns>
         public TTarget MapTo<TSource, TTarget>(TSource source, TTarget target)
         {
-            return Mapper.Map<TSource, TTarget>(source, target);
+            return _mapper.Map<TSource, TTarget>(source, target);
         }
 
         /// <summary>
@@ -57,7 +69,7 @@ namespace OSharp.AutoMapper
         /// <returns>输出DTO的结果集</returns>
         public IQueryable<TOutputDto> ToOutput<TOutputDto>(IQueryable source, params Expression<Func<TOutputDto, object>>[] membersToExpand)
         {
-            return source.ProjectTo(membersToExpand);
+            return source.ProjectTo(_configuration, membersToExpand);
         }
     }
 }

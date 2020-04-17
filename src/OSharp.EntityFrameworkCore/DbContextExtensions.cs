@@ -7,20 +7,20 @@
 //  <last-date>2017-09-20 1:06</last-date>
 // -----------------------------------------------------------------------
 
-using System.Collections.Generic;
+using System;
 using System.Linq;
 using System.Threading.Tasks;
 
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Infrastructure;
-using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Storage;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
-using OSharp.Audits;
-using OSharp.Core;
-using OSharp.Core.EntityInfos;
-using OSharp.Dependency;
+using OSharp.Collections;
+using OSharp.Core.Options;
+using OSharp.Data;
 using OSharp.Exceptions;
 
 
@@ -44,7 +44,8 @@ namespace OSharp.Entity
         /// </summary>
         public static bool ExistsRelationalDatabase(this DbContext context)
         {
-            return context.Database.GetService<IDatabaseCreator>() is RelationalDatabaseCreator creator && creator.Exists();
+            RelationalDatabaseCreator creator = context.Database.GetService<IDatabaseCreator>() as RelationalDatabaseCreator;
+            return creator != null && creator.Exists();
         }
 
         /// <summary>
@@ -52,15 +53,20 @@ namespace OSharp.Entity
         /// </summary>
         public static void CheckAndMigration(this DbContext dbContext)
         {
-            if (dbContext.Database.GetPendingMigrations().Any())
+            string[] migrations = dbContext.Database.GetPendingMigrations().ToArray();
+            if (migrations.Length > 0)
             {
                 dbContext.Database.Migrate();
+                ILoggerFactory loggerFactory = dbContext.GetService<ILoggerFactory>();
+                ILogger logger = loggerFactory.CreateLogger("OSharp.Entity.DbContextExtensions");
+                logger.LogInformation($"已提交{migrations.Length}条挂起的迁移记录：{migrations.ExpandAndToString()}");
             }
         }
 
         /// <summary>
         /// 执行指定的Sql语句
         /// </summary>
+        [Obsolete("使用 ExecuteSqlRaw 代替")]
         public static int ExecuteSqlCommand(this IDbContext dbContext, string sql, params object[] parameters)
         {
             if (!(dbContext is DbContext context))
@@ -73,7 +79,8 @@ namespace OSharp.Entity
         /// <summary>
         /// 异步执行指定的Sql语句
         /// </summary>
-        public static Task<int> ExecuteSqlCommandAsync(this IDbContext dbContext, string sql, params object [] parameters)
+        [Obsolete("使用 ExecuteSqlRawAsync 代替")]
+        public static Task<int> ExecuteSqlCommandAsync(this IDbContext dbContext, string sql, params object[] parameters)
         {
             if (!(dbContext is DbContext context))
             {
@@ -83,77 +90,102 @@ namespace OSharp.Entity
         }
 
         /// <summary>
-        /// 获取上下文实体审计数据
+        /// 执行指定的Sql语句
         /// </summary>
-        public static IList<AuditEntity> GetAuditEntities(this DbContext context)
+        public static int ExecuteSqlRaw(this IDbContext dbContext, string sql, params object[] parameters)
         {
-            List<AuditEntity> result = new List<AuditEntity>();
-            IEntityInfoHandler entityInfoHandler = ServiceLocator.Instance.GetService<IEntityInfoHandler>();
-            if (entityInfoHandler == null)
+            if (!(dbContext is DbContext context))
             {
-                return result;
+                throw new OsharpException($"参数dbContext类型为“{dbContext.GetType()}”，不能转换为 DbContext");
             }
-            EntityState[] states = { EntityState.Added, EntityState.Modified, EntityState.Deleted };
-            List<EntityEntry> entries = context.ChangeTracker.Entries().Where(m => m.Entity != null && states.Contains(m.State)).ToList();
-            if (entries.Count == 0)
-            {
-                return result;
-            }
-            foreach (EntityEntry entry in entries)
-            {
-                IEntityInfo entityInfo = entityInfoHandler.GetEntityInfo(entry.Entity.GetType());
-                if (entityInfo == null || !entityInfo.AuditEnabled)
-                {
-                    continue;
-                }
-                result.Add(GetAuditEntity(entry, entityInfo));
-            }
-            return result;
+            return context.Database.ExecuteSqlRaw(sql, parameters);
         }
 
-        private static AuditEntity GetAuditEntity(EntityEntry entry, IEntityInfo entityInfo)
+        /// <summary>
+        /// 异步执行指定的Sql语句
+        /// </summary>
+        public static Task<int> ExecuteSqlRawAsync(this IDbContext dbContext, string sql, params object[] parameters)
         {
-            AuditEntity audit = new AuditEntity() { Name = entityInfo.Name, TypeName = entityInfo.TypeName, OperateType = OperateType.Insert };
-            foreach (IProperty property in entry.CurrentValues.Properties)
+            if (!(dbContext is DbContext context))
             {
-                if (property.IsConcurrencyToken)
+                throw new OsharpException($"参数dbContext类型为“{dbContext.GetType()}”，不能转换为 DbContext");
+            }
+            return context.Database.ExecuteSqlRawAsync(sql, parameters);
+        }
+
+        /// <summary>
+        /// 执行指定的格式化Sql语句
+        /// </summary>
+        public static int ExecuteSqlInterpolated(this IDbContext dbContext, FormattableString sql)
+        {
+            if (!(dbContext is DbContext context))
+            {
+                throw new OsharpException($"参数dbContext类型为“{dbContext.GetType()}”，不能转换为 DbContext");
+            }
+            return context.Database.ExecuteSqlInterpolated(sql);
+        }
+
+        /// <summary>
+        /// 异步执行指定的格式化Sql语句
+        /// </summary>
+        public static Task<int> ExecuteSqlInterpolatedAsync(this IDbContext dbContext, FormattableString sql)
+        {
+            if (!(dbContext is DbContext context))
+            {
+                throw new OsharpException($"参数dbContext类型为“{dbContext.GetType()}”，不能转换为 DbContext");
+            }
+            return context.Database.ExecuteSqlInterpolatedAsync(sql);
+        }
+
+        /// <summary>
+        /// 获取实体上下文所属的数据库类型
+        /// </summary>
+        public static DatabaseType GetDatabaseType(this IDbContext dbContext)
+        {
+            if (!(dbContext is DbContext context))
+            {
+                throw new OsharpException($"参数dbContext类型为“{dbContext.GetType()}”，不能转换为 DbContext");
+            }
+
+            OsharpOptions options = context.GetService<IOptions<OsharpOptions>>()?.Value;
+            if (options != null)
+            {
+                return options.DbContexts.First(m => m.Value.DbContextType == context.GetType()).Value.DatabaseType;
+            }
+
+            return DatabaseType.SqlServer;
+        }
+
+        /// <summary>
+        /// 更新上下文中指定实体的状态
+        /// </summary>
+        /// <typeparam name="TEntity">实体类型</typeparam>
+        /// <typeparam name="TKey">主键类型</typeparam>
+        /// <param name="context">上下文对象</param>
+        /// <param name="entities">要更新的实体类型</param>
+        public static void Update<TEntity, TKey>(this DbContext context, params TEntity[] entities)
+            where TEntity : class, IEntity<TKey>
+        {
+            Check.NotNull(entities, nameof(entities));
+
+            DbSet<TEntity> set = context.Set<TEntity>();
+            foreach (TEntity entity in entities)
+            {
+                try
                 {
-                    continue;
-                }
-                string name = property.Name;
-                if (property.IsPrimaryKey())
-                {
-                    audit.EntityKey = entry.State == EntityState.Deleted
-                        ? entry.Property(property.Name).OriginalValue?.ToString()
-                        : entry.Property(property.Name).CurrentValue?.ToString();
-                }
-                AuditEntityProperty auditProperty = new AuditEntityProperty()
-                {
-                    Name = name,
-                    FieldName = entityInfo.PropertyNames[name],
-                    DataType = property.ClrType.ToString()
-                };
-                if (entry.State == EntityState.Added)
-                {
-                    auditProperty.NewValue = entry.Property(property.Name).CurrentValue?.ToString();
-                }
-                else if (entry.State == EntityState.Deleted)
-                {
-                    auditProperty.OriginalValue = entry.Property(property.Name).OriginalValue?.ToString();
-                }
-                else if (entry.State == EntityState.Modified)
-                {
-                    string currentValue = entry.Property(property.Name).CurrentValue?.ToString();
-                    string originalValue = entry.Property(property.Name).OriginalValue?.ToString();
-                    if (currentValue != originalValue)
+                    EntityEntry<TEntity> entry = context.Entry(entity);
+                    if (entry.State == EntityState.Detached)
                     {
-                        auditProperty.NewValue = currentValue;
-                        auditProperty.OriginalValue = originalValue;
+                        set.Attach(entity);
+                        entry.State = EntityState.Modified;
                     }
                 }
-                audit.Properties.Add(auditProperty);
+                catch (InvalidOperationException)
+                {
+                    TEntity oldEntity = set.Find(entity.Id);
+                    context.Entry(oldEntity).CurrentValues.SetValues(entity);
+                }
             }
-            return audit;
         }
     }
 }

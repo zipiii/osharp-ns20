@@ -12,13 +12,11 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Reflection;
 
+using OSharp.Authorization.EntityInfos;
 using OSharp.Entity;
-using OSharp.Core;
-using OSharp.Core.EntityInfos;
 
 using Xunit;
 
-using OSharp.Reflection;
 using OSharp.UnitTest.Infrastructure;
 
 
@@ -59,12 +57,12 @@ namespace OSharp.Reflection.Tests
         }
 
         [Fact()]
-        public void GetNonNummableType()
+        public void GetNonNullableType()
         {
-            Assert.Equal(typeof(int), typeof(int?).GetNonNummableType());
-            Assert.Equal(typeof(int), typeof(Nullable<int>).GetNonNummableType());
+            Assert.Equal(typeof(int), typeof(int?).GetNonNullableType());
+            Assert.Equal(typeof(int), typeof(Nullable<int>).GetNonNullableType());
 
-            Assert.Equal(typeof(int), typeof(int).GetNonNummableType());
+            Assert.Equal(typeof(int), typeof(int).GetNonNullableType());
         }
 
         [Fact()]
@@ -133,6 +131,32 @@ namespace OSharp.Reflection.Tests
             Assert.True(typeof(List<string>).IsBaseOn(typeof(IList<string>)));
 
             Assert.True(typeof(string).IsBaseOn<IEnumerable>());
+        }
+
+        [Fact]
+        public void ShortDisplayNameTest()
+        {
+            Assert.Equal("int", typeof(Int32).ShortDisplayName());
+            Assert.Equal("bool", typeof(Boolean).ShortDisplayName());
+            Assert.Equal("List<>", typeof(List<>).ShortDisplayName());
+            Assert.Equal("TypeExtensionsTests", typeof(TypeExtensionsTests).ShortDisplayName());
+
+            Assert.Equal("int", typeof(Int32).DisplayName());
+            Assert.Equal("bool", typeof(Boolean).DisplayName());
+            Assert.Equal("System.Collections.Generic.List<>", typeof(List<>).DisplayName());
+            Assert.Equal("OSharp.Reflection.Tests.TypeExtensionsTests", typeof(TypeExtensionsTests).DisplayName());
+        }
+
+        [Fact()]
+        public void IsVirtualTest()
+        {
+            Type type = typeof(TestEntity);
+            PropertyInfo property = type.GetProperty("Id");
+            Assert.False(property.IsVirtual());
+            property = type.GetProperty("AddDate");
+            Assert.False(property.IsVirtual());
+            property = type.GetProperty("TestEntities");
+            Assert.True(property.IsVirtual());
         }
     }
 }

@@ -1,29 +1,24 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
+  <Import Project="../../build/public.props" />
+  <Import Project="../../build/version.props" />
+
   <PropertyGroup>
+    <TargetFramework>netstandard2.1</TargetFramework>
     <PackageId>OSharpNS.AutoMapper</PackageId>
-    <Summary>OSharp(.NetStandard2.0) AutoMapper 对象映射组件</Summary>
-    <Description>OSharp(.NetStandard2.0) AutoMapper 对象映射组件，封装基于AutoMapper的对象映射实现</Description>
+    <Summary>OSharp AutoMapper 对象映射组件</Summary>
+    <Description>OSharp AutoMapper 对象映射组件，封装基于AutoMapper的对象映射实现</Description>
+    <RootNamespace>OSharp.AutoMapper</RootNamespace>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
-    <DocumentationFile>bin\Release\netstandard2.0\OSharp.AutoMapper.xml</DocumentationFile>
+    <DocumentationFile>bin\Release\OSharp.AutoMapper.xml</DocumentationFile>
+    <OutputPath>bin\Release</OutputPath>
   </PropertyGroup>
 
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
-    <DocumentationFile>bin\Debug\netstandard2.0\OSharp.AutoMapper.xml</DocumentationFile>
-  </PropertyGroup>
-
-  <Import Project="../../build/public.props" />
-  <Import Project="../../build/version.props" />
   <ItemGroup>
-    <Compile Remove="ServiceCollectionExtensions1.cs" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <PackageReference Include="AutoMapper" Version="7.0.1" />
-    <PackageReference Include="Microsoft.AspNetCore.Http.Abstractions" Version="2.1.1" />
-    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="2.1.1" />
+    <PackageReference Include="AutoMapper" Version="9.0.0" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="3.1.3" />
   </ItemGroup>
 
   <ItemGroup>

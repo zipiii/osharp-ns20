@@ -44,18 +44,5 @@ namespace OSharp.Timing.Tests
             }
         }
 
-        [Fact()]
-        public void ToUniqueStringTest()
-        {
-            DateTime now = new DateTime(2015, 11, 4, 15, 10, 25);
-            Assert.Equal("1530854625", now.ToUniqueString());
-            Assert.Equal("1530854625000", now.ToUniqueString(true));
-        }
-
-        [Fact()]
-        public void ToJsGetTimeTest()
-        {
-            string ts = DateTime.Now.ToJsGetTime();
-        }
     }
 }

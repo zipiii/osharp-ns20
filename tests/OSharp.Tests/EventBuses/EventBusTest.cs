@@ -1,15 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
 using Microsoft.Extensions.DependencyInjection;
 
-using OSharp.Core;
 using OSharp.Dependency;
 using OSharp.EventBuses;
-using OSharp.Maths;
+using OSharp.UnitTest.Infrastructure;
 
 using Shouldly;
 
@@ -17,17 +15,8 @@ using Xunit;
 
 namespace OSharp.Tests.IEventBuses
 {
-    public class IEventBusTests
+    public class IEventBusTests : AppUnitTestBase
     {
-        public IEventBusTests()
-        {
-            IServiceCollection services = new ServiceCollection();
-            services.AddOSharp();
-            services.AddLogging();
-            IServiceProvider provider = services.BuildServiceProvider();
-            ServiceLocator.Instance.TrySetApplicationServiceProvider(provider);
-        }
-
         [Fact]
         public void Subscribe_Test()
         {
@@ -37,24 +26,24 @@ namespace OSharp.Tests.IEventBuses
 
             bus.Subscribe<HelloEventData, HelloEventHandler>();
             HelloEventData data = new HelloEventData("hello world");
-            bus.PublishSync(data);
-            Thread.Sleep(50);
+            bus.Publish(data);
+            //Thread.Sleep(50);
             data.List.ShouldContain(data.Message);
             data.List.Clear();
             bus.UnsubscribeAll<HelloEventData>();
 
             Action<HelloEventData> action = m => m.List.Add(m.Message);
             bus.Subscribe<HelloEventData>(action);
-            bus.PublishSync(data);
-            Thread.Sleep(50);
+            bus.Publish(data);
+            //Thread.Sleep(50);
             data.List.ShouldContain(data.Message);
             data.List.Clear();
             bus.Unsubscribe(action);
 
             IEventHandler<HelloEventData> handler = new HelloEventHandler();
             bus.Subscribe<HelloEventData>(handler);
-            bus.PublishSync(typeof(HelloEventData), (IEventData)data);
-            Thread.Sleep(50);
+            bus.Publish(typeof(HelloEventData), (IEventData)data);
+            //Thread.Sleep(50);
             data.List.ShouldContain(data.Message);
             data.List.Clear();
             bus.Unsubscribe(handler);
@@ -69,10 +58,10 @@ namespace OSharp.Tests.IEventBuses
             bus.Subscribe<HelloEventData, HelloEventHandler>();
             HelloEventData data = new HelloEventData("hello world");
             await bus.PublishAsync(data);
-            //Thread.Sleep(50);
-            //data.List.ShouldContain(data.Message);
-            //data.List.Clear();
-            //bus.UnsubscribeAll<HelloEventData>();
+            Thread.Sleep(100);
+            data.List.ShouldContain(data.Message);
+            data.List.Clear();
+            bus.UnsubscribeAll<HelloEventData>();
         }
 
         private class HelloEventData : EventDataBase
@@ -92,7 +81,7 @@ namespace OSharp.Tests.IEventBuses
         }
 
 
-        private class HelloEventHandler : EventHandlerBase<HelloEventData>, ITransientDependency
+        private class HelloEventHandler : EventHandlerBase<HelloEventData>
         {
             /// <summary>
             /// 事件处理
@@ -114,5 +103,18 @@ namespace OSharp.Tests.IEventBuses
                 return Task.Run(() => Handle(eventData), cancelToken);
             }
         }
+
+
+        public class EventBusStartup : TestStartup
+        {
+            public override void ConfigureServices(IServiceCollection services)
+            {
+                services.AddHttpContextAccessor().AddLogging();
+
+                services.AddOSharp();
+            }
+        }
+
     }
+
 }

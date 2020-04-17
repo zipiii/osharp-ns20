@@ -3,11 +3,13 @@
 //      Copyright (c) 2014-2018 OSharp. All rights reserved.
 //  </copyright>
 //  <site>http://www.osharp.org</site>
-//  <last-editor>郭明锋</last-editor>
-//  <last-date>2018-06-23 15:18</last-date>
+//  <last-editor></last-editor>
+//  <last-date>2018-07-25 12:03</last-date>
 // -----------------------------------------------------------------------
 
 using System;
+using System.Collections.Generic;
+using System.Linq;
 
 using Microsoft.Extensions.DependencyInjection;
 
@@ -27,7 +29,7 @@ namespace OSharp.Core.Packs
         public virtual PackLevel Level => PackLevel.Business;
 
         /// <summary>
-        /// 获取 模块启动顺序，模块启动的顺序先按级别启动，级别内部再按此顺序启动，
+        /// 获取 模块启动顺序，模块启动的顺序先按级别启动，同一级别内部再按此顺序启动，
         /// 级别默认为0，表示无依赖，需要在同级别有依赖顺序的时候，再重写为>0的顺序值
         /// </summary>
         public virtual int Order => 0;
@@ -48,9 +50,9 @@ namespace OSharp.Core.Packs
         }
 
         /// <summary>
-        /// 使用模块服务
+        /// 应用模块服务
         /// </summary>
-        /// <param name="provider"></param>
+        /// <param name="provider">服务提供者</param>
         public virtual void UsePack(IServiceProvider provider)
         {
             IsEnabled = true;
@@ -60,14 +62,33 @@ namespace OSharp.Core.Packs
         /// 获取当前模块的依赖模块类型
         /// </summary>
         /// <returns></returns>
-        internal Type[] GetDependModuleTypes()
+        internal Type[] GetDependPackTypes(Type packType = null)
         {
-            DependsOnPacksAttribute depends = this.GetType().GetAttribute<DependsOnPacksAttribute>();
-            if (depends == null)
+            if (packType == null)
+            {
+                packType = GetType();
+            }
+            DependsOnPacksAttribute[] dependAttrs = packType.GetAttributes<DependsOnPacksAttribute>();
+            if (dependAttrs.Length == 0)
             {
                 return new Type[0];
             }
-            return depends.DependedModuleTypes;
+            List<Type> dependTypes = new List<Type>();
+            foreach (DependsOnPacksAttribute dependAttr in dependAttrs)
+            {
+                Type[] packTypes = dependAttr.DependedPackTypes;
+                if (packTypes.Length == 0)
+                {
+                    continue;
+                }
+                dependTypes.AddRange(packTypes);
+                foreach (Type type in packTypes)
+                {
+                    dependTypes.AddRange(GetDependPackTypes(type));
+                }
+            }
+
+            return dependTypes.Distinct().ToArray();
         }
     }
 }

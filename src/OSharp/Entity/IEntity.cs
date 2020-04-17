@@ -7,19 +7,16 @@
 //  <last-date>2017-08-16 22:37</last-date>
 // -----------------------------------------------------------------------
 
-using System;
-
-
 namespace OSharp.Entity
 {
     /// <summary>
     /// 数据模型接口
     /// </summary>
-    public interface IEntity<out TKey> where TKey : IEquatable<TKey>
+    public interface IEntity<TKey>
     {
         /// <summary>
-        /// 获取 实体唯一标识，主键
+        /// 获取或设置 实体唯一标识，主键
         /// </summary>
-        TKey Id { get; }
+        TKey Id { get; set; }
     }
 }

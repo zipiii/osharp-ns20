@@ -7,9 +7,11 @@
 //  <last-date>2014-09-08 7:46</last-date>
 // -----------------------------------------------------------------------
 
-using System;
 using System.Diagnostics;
+using System.Linq;
 using System.Reflection;
+
+using Microsoft.Extensions.DependencyModel;
 
 using OSharp.Extensions;
 
@@ -39,6 +41,32 @@ namespace OSharp.Reflection
             assembly.CheckNotNull("assembly");
             FileVersionInfo info = FileVersionInfo.GetVersionInfo(assembly.Location);
             return info.ProductVersion;
+        }
+
+        /// <summary>
+        /// 获取CLI版本号
+        /// </summary>
+        public static string GetCliVersion()
+        {
+            string[] dllNames =
+            {
+                "Microsoft.EntityFrameworkCore",
+                "Microsoft.Extensions.Configuration.Binder",
+                "Microsoft.Extensions.DependencyInjection",
+                "Microsoft.Extensions.DependencyInjection.Abstractions",
+                "Microsoft.Extensions.Configuration.Abstractions"
+            };
+            CompilationLibrary lib = null;
+            foreach (string dllName in dllNames)
+            {
+                lib = DependencyContext.Default.CompileLibraries.FirstOrDefault(m => m.Name == dllName);
+                if (lib != null)
+                {
+                    break;
+                }
+            }
+            string cliVersion = lib?.Version;
+            return cliVersion;
         }
     }
 }

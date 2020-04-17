@@ -7,14 +7,17 @@
 // -----------------------------------------------------------------------
 
 using System;
+using System.Collections.Generic;
 using System.ComponentModel;
+
+using OSharp.Entity;
 
 
 namespace OSharp.UnitTest.Infrastructure
 {
     [Description("测试实体")]
     [Serializable]
-    public class TestEntity
+    public class TestEntity : IEntity<int>
     {
         public TestEntity()
         {
@@ -33,5 +36,7 @@ namespace OSharp.UnitTest.Infrastructure
 
         [Description("是否删除")]
         public bool IsDeleted { get; set; }
+
+        public virtual List<TestEntity> TestEntities { get; set; } = new List<TestEntity>();
     }
 }

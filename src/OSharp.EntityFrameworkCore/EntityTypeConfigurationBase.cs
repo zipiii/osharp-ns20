@@ -38,9 +38,14 @@ namespace OSharp.Entity
         /// 将当前实体类映射对象注册到数据上下文模型构建器中
         /// </summary>
         /// <param name="modelBuilder">上下文模型构建器</param>
-        public void RegistTo(ModelBuilder modelBuilder)
+        public void RegisterTo(ModelBuilder modelBuilder)
         {
             modelBuilder.ApplyConfiguration(this);
+            // 给软删除的实体添加全局过滤器
+            if (typeof(ISoftDeletable).IsAssignableFrom(typeof(TEntity)))
+            {
+                modelBuilder.Entity<TEntity>().HasQueryFilter(m => ((ISoftDeletable)m).DeletedTime == null);
+            }
         }
 
         /// <summary>

@@ -1,6 +1,6 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Text;
+
+using Shouldly;
 
 using Xunit;
 
@@ -13,7 +13,7 @@ namespace OSharp.Develop.Tests
         public void Ram_Test()
         {
             CodeRamer.Initialize();
-            CodeRamer.Ram("name",
+            string output = CodeRamer.Ram("name",
                 () =>
                 {
                     int sum = 0;
@@ -21,8 +21,11 @@ namespace OSharp.Develop.Tests
                     {
                         sum += i;
                     }
-                    Console.WriteLine($"sum: {sum}");
+                    sum.ShouldBe(50005000);
                 });
+            output.ShouldContain("\tRam:\t");
+            output.ShouldContain("KB");
+            output.ShouldContain("MB");
         }
     }
 }

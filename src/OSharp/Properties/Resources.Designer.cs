@@ -19,7 +19,7 @@ namespace OSharp.Properties {
     // 类通过类似于 ResGen 或 Visual Studio 的工具自动生成的。
     // 若要添加或移除成员，请编辑 .ResX 文件，然后重新运行 ResGen
     // (以 /str 作为命令选项)，或重新生成 VS 项目。
-    [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Resources.Tools.StronglyTypedResourceBuilder", "15.0.0.0")]
+    [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Resources.Tools.StronglyTypedResourceBuilder", "16.0.0.0")]
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
     [global::System.Runtime.CompilerServices.CompilerGeneratedAttribute()]
     internal class Resources {
@@ -47,7 +47,7 @@ namespace OSharp.Properties {
         }
         
         /// <summary>
-        ///   使用此强类型资源类，为所有资源查找
+        ///   重写当前线程的 CurrentUICulture 属性
         ///   重写当前线程的 CurrentUICulture 属性。
         /// </summary>
         [global::System.ComponentModel.EditorBrowsableAttribute(global::System.ComponentModel.EditorBrowsableState.Advanced)]
@@ -70,7 +70,7 @@ namespace OSharp.Properties {
         }
         
         /// <summary>
-        ///   查找类似 0 的本地化字符串。
+        ///   查找类似 进制转换溢出。 的本地化字符串。
         /// </summary>
         internal static string AnyRadixConvert_Overflow {
             get {
@@ -138,6 +138,51 @@ namespace OSharp.Properties {
         internal static string Filter_RuleFieldInTypeNotFound {
             get {
                 return ResourceManager.GetString("Filter_RuleFieldInTypeNotFound", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   查找类似 返回数据处理错误，请重试操作。 的本地化字符串。
+        /// </summary>
+        internal static string Http_Seciruty_Client_DecryptResponse_Failt {
+            get {
+                return ResourceManager.GetString("Http_Seciruty_Client_DecryptResponse_Failt", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   查找类似 客户端对发送数据进行加密处理时发生异常。 的本地化字符串。
+        /// </summary>
+        internal static string Http_Security_Client_EncryptRequest_Failt {
+            get {
+                return ResourceManager.GetString("Http_Security_Client_EncryptRequest_Failt", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   查找类似 客户端对返回数据签名验证未通过。 的本地化字符串。
+        /// </summary>
+        internal static string Http_Security_Client_VerifyResponse_Failt {
+            get {
+                return ResourceManager.GetString("Http_Security_Client_VerifyResponse_Failt", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   查找类似 服务器对请求数据进行解密处理时发生异常。 的本地化字符串。
+        /// </summary>
+        internal static string Http_Security_Host_DecryptRequest_Failt {
+            get {
+                return ResourceManager.GetString("Http_Security_Host_DecryptRequest_Failt", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   查找类似 服务器对返回数据进行加密处理时发生异常。 的本地化字符串。
+        /// </summary>
+        internal static string Http_Security_Host_EncryptResponse_Failt {
+            get {
+                return ResourceManager.GetString("Http_Security_Host_EncryptResponse_Failt", resourceCulture);
             }
         }
         
@@ -282,6 +327,15 @@ namespace OSharp.Properties {
         internal static string ParameterCheck_FileNotExists {
             get {
                 return ResourceManager.GetString("ParameterCheck_FileNotExists", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   查找类似 集合“{0}”中不能包含null的项 的本地化字符串。
+        /// </summary>
+        internal static string ParameterCheck_NotContainsNull_Collection {
+            get {
+                return ResourceManager.GetString("ParameterCheck_NotContainsNull_Collection", resourceCulture);
             }
         }
         

@@ -7,14 +7,17 @@
 //  <last-date>2018-06-23 15:26</last-date>
 // -----------------------------------------------------------------------
 
-using System;
+using System.ComponentModel;
 using System.Linq;
 
+using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
-using OSharp.Core.Functions;
-using OSharp.Core.Modules;
+using OSharp.Authorization.Functions;
+using OSharp.Authorization.Modules;
 using OSharp.Core.Packs;
+using OSharp.Systems;
 
 
 namespace OSharp.AspNetCore.Mvc
@@ -22,7 +25,9 @@ namespace OSharp.AspNetCore.Mvc
     /// <summary>
     /// MVC功能点模块
     /// </summary>
-    public class MvcFunctionPack : OsharpPack
+    [DependsOnPacks(typeof(MvcPack), typeof(SystemPack))]
+    [Description("MVC功能点模块")]
+    public class MvcFunctionPack : AspOsharpPack
     {
         /// <summary>
         /// 获取 模块级别
@@ -36,19 +41,20 @@ namespace OSharp.AspNetCore.Mvc
         /// <returns></returns>
         public override IServiceCollection AddServices(IServiceCollection services)
         {
+            services.GetOrAddTypeFinder<IFunctionTypeFinder>(assemblyFinder => new MvcControllerTypeFinder(assemblyFinder));
             services.AddSingleton<IFunctionHandler, MvcFunctionHandler>();
-            services.AddSingleton<IModuleInfoPicker, MvcModuleInfoPicker>();
+            services.TryAddSingleton<IModuleInfoPicker, MvcModuleInfoPicker>();
 
             return services;
         }
 
         /// <summary>
-        /// 使用模块服务
+        /// 应用模块服务
         /// </summary>
-        /// <param name="provider"></param>
-        public override void UsePack(IServiceProvider provider)
+        /// <param name="app">应用程序构建器</param>
+        public override void UsePack(IApplicationBuilder app)
         {
-            IFunctionHandler functionHandler = provider.GetServices<IFunctionHandler>().FirstOrDefault(m => m.GetType() == typeof(MvcFunctionHandler));
+            IFunctionHandler functionHandler = app.ApplicationServices.GetServices<IFunctionHandler>().FirstOrDefault(m => m.GetType() == typeof(MvcFunctionHandler));
             if (functionHandler == null)
             {
                 return;

@@ -12,19 +12,20 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
+using System.Threading.Tasks;
 
 using Microsoft.Extensions.Caching.Distributed;
 
+using OSharp.Authorization.Functions;
 using OSharp.Collections;
-using OSharp.Core.Functions;
 using OSharp.Data;
 using OSharp.Dependency;
 using OSharp.Entity;
+using OSharp.Exceptions;
 using OSharp.Extensions;
 using OSharp.Filter;
 using OSharp.Json;
-using OSharp.Mapping;
-using OSharp.Properties;
+using OSharp.Reflection;
 
 
 namespace OSharp.Caching
@@ -54,18 +55,50 @@ namespace OSharp.Caching
         }
 
         /// <summary>
+        /// 异步将对象存入缓存中
+        /// </summary>
+        public static async Task SetAsync(this IDistributedCache cache, string key, object value, DistributedCacheEntryOptions options = null)
+        {
+            Check.NotNullOrEmpty(key, nameof(key));
+            Check.NotNull(value, nameof(value));
+
+            string json = value.ToJsonString();
+            if (options == null)
+            {
+                await cache.SetStringAsync(key, json);
+            }
+            else
+            {
+                await cache.SetStringAsync(key, json, options);
+            }
+        }
+
+        /// <summary>
         /// 将对象存入缓存中，使用指定时长
         /// </summary>
         public static void Set(this IDistributedCache cache, string key, object value, int cacheSeconds)
         {
             Check.NotNullOrEmpty(key, nameof(key));
             Check.NotNull(value, nameof(value));
-            Check.GreaterThan(cacheSeconds, nameof(cacheSeconds), 0, true);
-
+            Check.GreaterThan(cacheSeconds, nameof(cacheSeconds), 0);
 
             DistributedCacheEntryOptions options = new DistributedCacheEntryOptions();
             options.SetAbsoluteExpiration(TimeSpan.FromSeconds(cacheSeconds));
             cache.Set(key, value, options);
+        }
+
+        /// <summary>
+        /// 异步将对象存入缓存中，使用指定时长
+        /// </summary>
+        public static Task SetAsync(this IDistributedCache cache, string key, object value, int cacheSeconds)
+        {
+            Check.NotNullOrEmpty(key, nameof(key));
+            Check.NotNull(value, nameof(value));
+            Check.GreaterThan(cacheSeconds, nameof(cacheSeconds), 0);
+
+            DistributedCacheEntryOptions options = new DistributedCacheEntryOptions();
+            options.SetAbsoluteExpiration(TimeSpan.FromSeconds(cacheSeconds));
+            return cache.SetAsync(key, value, options);
         }
 
         /// <summary>
@@ -77,12 +110,29 @@ namespace OSharp.Caching
             Check.NotNull(value, nameof(value));
             Check.NotNull(function, nameof(function));
 
-            if (function.CacheExpirationSeconds == 0)
+            DistributedCacheEntryOptions options = function.ToCacheOptions();
+            if (options == null)
             {
                 return;
             }
-            DistributedCacheEntryOptions options = function.ToCacheOptions();
             cache.Set(key, value, options);
+        }
+
+        /// <summary>
+        /// 异步将对象存入缓存中，使用功能配置
+        /// </summary>
+        public static Task SetAsync(this IDistributedCache cache, string key, object value, IFunction function)
+        {
+            Check.NotNullOrEmpty(key, nameof(key));
+            Check.NotNull(value, nameof(value));
+            Check.NotNull(function, nameof(function));
+
+            DistributedCacheEntryOptions options = function.ToCacheOptions();
+            if (options == null)
+            {
+                return Task.FromResult(0);
+            }
+            return cache.SetAsync(key, value, options);
         }
 
         /// <summary>
@@ -99,18 +149,78 @@ namespace OSharp.Caching
         }
 
         /// <summary>
+        /// 异步获取指定键的缓存项
+        /// </summary>
+        public static async Task<TResult> GetAsync<TResult>(this IDistributedCache cache, string key)
+        {
+            string json = await cache.GetStringAsync(key);
+            if (json == null)
+            {
+                return default(TResult);
+            }
+            return json.FromJsonString<TResult>();
+        }
+
+        /// <summary>
         /// 获取指定键的缓存项，不存在则从指定委托获取，并回存到缓存中再返回
         /// </summary>
-        public static TResult Get<TResult>(this IDistributedCache cache, string key, Func<TResult> getFunc, int cacheSeconds)
+        public static TResult Get<TResult>(this IDistributedCache cache, string key, Func<TResult> getFunc, DistributedCacheEntryOptions options = null)
         {
             TResult result = cache.Get<TResult>(key);
-            if (result != null)
+            if (!Equals(result, default(TResult)))
             {
                 return result;
             }
             result = getFunc();
-            cache.Set(key, result, cacheSeconds);
+            if (Equals(result, default(TResult)))
+            {
+                return default(TResult);
+            }
+            cache.Set(key, result, options);
             return result;
+        }
+
+        /// <summary>
+        /// 异步获取指定键的缓存项，不存在则从指定委托获取，并回存到缓存中再返回
+        /// </summary>
+        public static async Task<TResult> GetAsync<TResult>(this IDistributedCache cache, string key, Func<Task<TResult>> getAsyncFunc, DistributedCacheEntryOptions options = null)
+        {
+            TResult result = await cache.GetAsync<TResult>(key);
+            if (!Equals(result, default(TResult)))
+            {
+                return result;
+            }
+            result = await getAsyncFunc();
+            if (Equals(result, default(TResult)))
+            {
+                return default(TResult);
+            }
+            await cache.SetAsync(key, result, options);
+            return result;
+        }
+
+        /// <summary>
+        /// 获取指定键的缓存项，不存在则从指定委托获取，并回存到缓存中再返回
+        /// </summary>
+        public static TResult Get<TResult>(this IDistributedCache cache, string key, Func<TResult> getFunc, int cacheSeconds)
+        {
+            Check.GreaterThan(cacheSeconds, nameof(cacheSeconds), 0);
+
+            DistributedCacheEntryOptions options = new DistributedCacheEntryOptions();
+            options.SetAbsoluteExpiration(TimeSpan.FromSeconds(cacheSeconds));
+            return cache.Get<TResult>(key, getFunc, options);
+        }
+
+        /// <summary>
+        /// 异步获取指定键的缓存项，不存在则从指定委托获取，并回存到缓存中再返回
+        /// </summary>
+        public static Task<TResult> GetAsync<TResult>(this IDistributedCache cache, string key, Func<Task<TResult>> getAsyncFunc, int cacheSeconds)
+        {
+            Check.GreaterThan(cacheSeconds, nameof(cacheSeconds), 0);
+
+            DistributedCacheEntryOptions options = new DistributedCacheEntryOptions();
+            options.SetAbsoluteExpiration(TimeSpan.FromSeconds(cacheSeconds));
+            return cache.GetAsync<TResult>(key, getAsyncFunc, options);
         }
 
         /// <summary>
@@ -118,44 +228,55 @@ namespace OSharp.Caching
         /// </summary>
         public static TResult Get<TResult>(this IDistributedCache cache, string key, Func<TResult> getFunc, IFunction function)
         {
-            TResult result = cache.Get<TResult>(key);
-            if (result != null)
+            DistributedCacheEntryOptions options = function.ToCacheOptions();
+            if (options == null)
             {
-                return result;
+                return getFunc();
             }
-            result = getFunc();
-            cache.Set(key, result, function);
-            return result;
+            return cache.Get<TResult>(key, getFunc, options);
+        }
+
+        /// <summary>
+        /// 获取指定键的缓存项，不存在则从指定委托获取，并回存到缓存中再返回
+        /// </summary>
+        public static Task<TResult> GetAsync<TResult>(this IDistributedCache cache, string key, Func<Task<TResult>> getAsyncFunc, IFunction function)
+        {
+            DistributedCacheEntryOptions options = function.ToCacheOptions();
+            if (options == null)
+            {
+                return getAsyncFunc();
+            }
+            return cache.GetAsync<TResult>(key, getAsyncFunc, options);
         }
 
         /// <summary>
         /// 查询分页数据结果，如缓存存在，直接返回，否则从数据源查找分页结果，并存入缓存中再返回
         /// </summary>
         public static PageResult<TResult> ToPageCache<TEntity, TResult>(this IQueryable<TEntity> source,
-            Expression<Func<TEntity, bool>> pridicate,
+            Expression<Func<TEntity, bool>> predicate,
             PageCondition pageCondition,
             Expression<Func<TEntity, TResult>> selector,
             int cacheSeconds = 60,
             params object[] keyParams)
         {
             IDistributedCache cache = ServiceLocator.Instance.GetService<IDistributedCache>();
-            string key = GetKey(source, pridicate, pageCondition, selector, keyParams);
-            return cache.Get(key, () => source.ToPage(pridicate, pageCondition, selector), cacheSeconds);
+            string key = GetKey(source, predicate, pageCondition, selector, keyParams);
+            return cache.Get(key, () => source.ToPage(predicate, pageCondition, selector), cacheSeconds);
         }
 
         /// <summary>
         /// 查询分页数据结果，如缓存存在，直接返回，否则从数据源查找分页结果，并存入缓存中再返回
         /// </summary>
         public static PageResult<TResult> ToPageCache<TEntity, TResult>(this IQueryable<TEntity> source,
-            Expression<Func<TEntity, bool>> pridicate,
+            Expression<Func<TEntity, bool>> predicate,
             PageCondition pageCondition,
             Expression<Func<TEntity, TResult>> selector,
             IFunction function,
             params object[] keyParams)
         {
             IDistributedCache cache = ServiceLocator.Instance.GetService<IDistributedCache>();
-            string key = GetKey(source, pridicate, pageCondition, selector, keyParams);
-            return cache.Get(key, () => source.ToPage(pridicate, pageCondition, selector), function);
+            string key = GetKey(source, predicate, pageCondition, selector, keyParams);
+            return cache.Get(key, () => source.ToPage(predicate, pageCondition, selector), function);
         }
 
         /// <summary>
@@ -519,7 +640,7 @@ namespace OSharp.Caching
         {
             IDistributedCache cache = ServiceLocator.Instance.GetService<IDistributedCache>();
             string key = GetKey<TSource, TOutputDto>(source, keyParams);
-            return cache.Get(key, () => source.ToOutput<TOutputDto>().ToList(), cacheSeconds);
+            return cache.Get(key, () => source.ToOutput<TSource, TOutputDto>().ToList(), cacheSeconds);
         }
 
         /// <summary>
@@ -537,7 +658,7 @@ namespace OSharp.Caching
         {
             IDistributedCache cache = ServiceLocator.Instance.GetService<IDistributedCache>();
             string key = GetKey<TSource, TOutputDto>(source, keyParams);
-            return cache.Get(key, () => source.ToOutput<TOutputDto>().ToArray(), cacheSeconds);
+            return cache.Get(key, () => source.ToOutput<TSource, TOutputDto>().ToArray(), cacheSeconds);
         }
 
         /// <summary>
@@ -555,7 +676,7 @@ namespace OSharp.Caching
         {
             IDistributedCache cache = ServiceLocator.Instance.GetService<IDistributedCache>();
             string key = GetKey<TSource, TOutputDto>(source, keyParams);
-            return cache.Get(key, () => source.ToOutput<TOutputDto>().ToList(), function);
+            return cache.Get(key, () => source.ToOutput<TSource, TOutputDto>().ToList(), function);
         }
 
         /// <summary>
@@ -573,7 +694,7 @@ namespace OSharp.Caching
         {
             IDistributedCache cache = ServiceLocator.Instance.GetService<IDistributedCache>();
             string key = GetKey<TSource, TOutputDto>(source, keyParams);
-            return cache.Get(key, () => source.ToOutput<TOutputDto>().ToArray(), function);
+            return cache.Get(key, () => source.ToOutput<TSource, TOutputDto>().ToArray(), function);
         }
 
         #endregion
@@ -605,16 +726,22 @@ namespace OSharp.Caching
             PageCondition pageCondition,
             Expression<Func<TEntity, TResult>> selector, params object[] keyParams)
         {
-            if (!typeof(TEntity).IsEntityType())
-            {
-                throw new InvalidOperationException(Resources.QueryCacheExtensions_TypeNotEntityType.FormatWith(typeof(TEntity).FullName));
-            }
-
             source = source.Where(predicate);
             SortCondition[] sortConditions = pageCondition.SortConditions;
             if (sortConditions == null || sortConditions.Length == 0)
             {
-                source = source.OrderBy("Id");
+                if (typeof(TEntity).IsEntityType())
+                {
+                    source = source.OrderBy("Id");
+                }
+                else if (typeof(TEntity).IsBaseOn<ICreatedTime>())
+                {
+                    source = source.OrderBy("CreatedTime");
+                }
+                else
+                {
+                    throw new OsharpException($"类型“{typeof(TEntity)}”未添加默认排序方式");
+                }
             }
             else
             {
@@ -643,16 +770,22 @@ namespace OSharp.Caching
             params object[] keyParams)
             where TOutputDto : IOutputDto
         {
-            if (!typeof(TEntity).IsEntityType())
-            {
-                throw new InvalidOperationException(Resources.QueryCacheExtensions_TypeNotEntityType.FormatWith(typeof(TEntity).FullName));
-            }
-
             source = source.Where(predicate);
             SortCondition[] sortConditions = pageCondition.SortConditions;
             if (sortConditions == null || sortConditions.Length == 0)
             {
-                source = source.OrderBy("Id");
+                if (typeof(TEntity).IsEntityType())
+                {
+                    source = source.OrderBy("Id");
+                }
+                else if (typeof(TEntity).IsBaseOn<ICreatedTime>())
+                {
+                    source = source.OrderBy("CreatedTime");
+                }
+                else
+                {
+                    throw new OsharpException($"类型“{typeof(TEntity)}”未添加默认排序方式");
+                }
             }
             else
             {
@@ -671,14 +804,14 @@ namespace OSharp.Caching
             source = source != null
                 ? source.Skip((pageIndex - 1) * pageSize).Take(pageSize)
                 : Enumerable.Empty<TEntity>().AsQueryable();
-            IQueryable<TOutputDto> query = source.ToOutput<TOutputDto>();
+            IQueryable<TOutputDto> query = source.ToOutput<TEntity, TOutputDto>(true);
             return GetKey(query.Expression, keyParams);
         }
 
         private static string GetKey<TSource, TOutputDto>(IQueryable<TSource> source,
             params object[] keyParams)
         {
-            IQueryable<TOutputDto> query = source.ToOutput<TOutputDto>();
+            IQueryable<TOutputDto> query = source.ToOutput<TSource, TOutputDto>();
             return GetKey(query.Expression, keyParams);
         }
 

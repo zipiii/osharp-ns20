@@ -34,8 +34,9 @@ namespace OSharp.AspNetCore
         public static bool IsAjaxRequest(this HttpRequest request)
         {
             Check.NotNull(request, nameof(request));
-            bool? flag = request.Headers?["X-Requested-With"].ToString()?.Equals("XMLHttpRequest", StringComparison.OrdinalIgnoreCase);
-            return flag.HasValue && flag.Value;
+
+            return string.Equals(request.Query["X-Requested-With"], "XMLHttpRequest", StringComparison.Ordinal)
+                || string.Equals(request.Headers["X-Requested-With"], "XMLHttpRequest", StringComparison.Ordinal);
         }
 
         /// <summary>
@@ -44,7 +45,15 @@ namespace OSharp.AspNetCore
         public static bool IsJsonContextType(this HttpRequest request)
         {
             Check.NotNull(request, nameof(request));
-            return request.Headers?["Content-Type"].ToString()?.IndexOf("application/json", StringComparison.OrdinalIgnoreCase) > -1;
+            bool flag = request.Headers?["Content-Type"].ToString().IndexOf("application/json", StringComparison.OrdinalIgnoreCase) > -1 
+                || request.Headers?["Content-Type"].ToString().IndexOf("text/json", StringComparison.OrdinalIgnoreCase) > -1;
+            if (flag)
+            {
+                return true;
+            }
+            flag = request.Headers?["Accept"].ToString().IndexOf("application/json", StringComparison.OrdinalIgnoreCase) > -1
+                || request.Headers?["Accept"].ToString().IndexOf("text/json", StringComparison.OrdinalIgnoreCase) > -1;
+            return flag;
         }
 
         /// <summary>

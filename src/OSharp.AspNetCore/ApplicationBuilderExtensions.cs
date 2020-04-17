@@ -8,14 +8,18 @@
 // -----------------------------------------------------------------------
 
 using System;
+using System.Diagnostics;
 
-using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
+using OSharp.AspNetCore;
 using OSharp.Core.Packs;
+using OSharp.Reflection;
 
 
-namespace OSharp.AspNetCore
+namespace Microsoft.AspNetCore.Builder
 {
     /// <summary>
     /// <see cref="IApplicationBuilder"/>辅助扩展方法
@@ -23,14 +27,32 @@ namespace OSharp.AspNetCore
     public static class ApplicationBuilderExtensions
     {
         /// <summary>
-        /// OSharp框架初始化
+        /// OSharp框架初始化，适用于AspNetCore环境
         /// </summary>
         public static IApplicationBuilder UseOSharp(this IApplicationBuilder app)
         {
-            IServiceProvider serviceProvider = app.ApplicationServices;
+            IServiceProvider provider = app.ApplicationServices;
+            ILogger logger = provider.GetLogger("ApplicationBuilderExtensions");
+            logger.LogInformation(0, "OSharp框架初始化开始");
+            Stopwatch watch = Stopwatch.StartNew();
+            OsharpPack[] packs = provider.GetAllPacks();
+            foreach (OsharpPack pack in packs)
+            {
+                string packName = pack.GetType().GetDescription();
+                logger.LogInformation($"正在初始化模块 “{packName}”");
+                if (pack is AspOsharpPack aspPack)
+                {
+                    aspPack.UsePack(app);
+                }
+                else
+                {
+                    pack.UsePack(provider);
+                }
+                logger.LogInformation($"模块 “{packName}” 初始化完成");
+            }
 
-            OSharpPackManager moduleManager = serviceProvider.GetService<OSharpPackManager>();
-            moduleManager.UseModules(serviceProvider);
+            watch.Stop();
+            logger.LogInformation(0, $"OSharp框架初始化完成，耗时：{watch.Elapsed}");
 
             return app;
         }
@@ -48,6 +70,25 @@ namespace OSharp.AspNetCore
                 }
                 builder.MapRoute("default", "{controller=Home}/{action=Index}/{id?}");
             });
+        }
+
+        /// <summary>
+        /// 添加Endpoint并Area路由支持
+        /// </summary>
+        public static IEndpointRouteBuilder MapControllersWithAreaRoute(this IEndpointRouteBuilder endpoints, bool area = true)
+        {
+            if (area)
+            {
+                endpoints.MapControllerRoute(
+                    name: "areas-router",
+                    pattern: "{area:exists}/{controller=Home}/{action=Index}/{id?}");
+            }
+
+            endpoints.MapControllerRoute(
+                name: "default",
+                pattern: "{controller=Home}/{action=Index}/{id?}");
+
+            return endpoints;
         }
     }
 }

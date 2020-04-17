@@ -10,8 +10,7 @@
 using System;
 using System.ComponentModel;
 
-using OSharp.Data;
-using OSharp.Extensions;
+using OSharp.Reflection;
 
 
 namespace OSharp.Entity
@@ -21,17 +20,6 @@ namespace OSharp.Entity
     /// </summary>
     public abstract class EntityBase<TKey> : IEntity<TKey> where TKey : IEquatable<TKey>
     {
-        /// <summary>
-        /// 初始化一个<see cref="EntityBase{TKey}"/>类型的新实例
-        /// </summary>
-        protected EntityBase()
-        {
-            if (typeof(TKey) == typeof(Guid))
-            {
-                Id = CombGuid.NewGuid().CastTo<TKey>();
-            }
-        }
-
         /// <summary>
         /// 获取或设置 编号
         /// </summary>
@@ -49,12 +37,33 @@ namespace OSharp.Entity
             {
                 return false;
             }
-            EntityBase<TKey> entity = obj as EntityBase<TKey>;
-            if (entity == null)
+            if (!(obj is EntityBase<TKey> entity))
             {
                 return false;
             }
-            return entity.Id.Equals(Id);
+            return IsKeyEqual(entity.Id, Id);
+        }
+
+        /// <summary>
+        /// 实体ID是否相等
+        /// </summary>
+        public static bool IsKeyEqual(TKey id1, TKey id2)
+        {
+            if (id1 == null && id2 == null)
+            {
+                return true;
+            }
+            if (id1 == null || id2 == null)
+            {
+                return false;
+            }
+
+            Type type = typeof(TKey);
+            if (type.IsDeriveClassFrom(typeof(IEquatable<TKey>)))
+            {
+                return id1.Equals(id2);
+            }
+            return Equals(id1, id2);
         }
 
         /// <summary>

@@ -7,6 +7,11 @@
 //  <last-date>2015-08-03 18:29</last-date>
 // -----------------------------------------------------------------------
 
+using System;
+
+using OSharp.Extensions;
+
+
 namespace OSharp.Data
 {
     /// <summary>
@@ -50,7 +55,7 @@ namespace OSharp.Data
     /// </summary>
     /// <typeparam name="TResultType">结果类型</typeparam>
     /// <typeparam name="TData">结果数据类型</typeparam>
-    public abstract class OsharpResult<TResultType, TData> : IOSharpResult<TResultType, TData>
+    public abstract class OsharpResult<TResultType, TData> : IOsharpResult<TResultType, TData>
     {
         /// <summary>
         /// 内部消息
@@ -83,6 +88,10 @@ namespace OSharp.Data
         /// </summary>
         protected OsharpResult(TResultType type, string message, TData data)
         {
+            if (message == null && typeof(TResultType).IsEnum)
+            {
+                message = (type as Enum)?.ToDescription();
+            }
             ResultType = type;
             _message = message;
             Data = data;

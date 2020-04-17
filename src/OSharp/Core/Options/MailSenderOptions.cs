@@ -20,18 +20,28 @@ namespace OSharp.Core.Options
         public string Host { get; set; }
 
         /// <summary>
+        /// 获取或设置 端口
+        /// </summary>
+        public int Port { get; set; }
+
+        /// <summary>
+        /// 获取或设置 是否SSL
+        /// </summary>
+        public bool EnableSsl { get; set; }
+
+        /// <summary>
         /// 获取或设置 发送方显示名
         /// </summary>
-        public string SenderDisplayName { get; set; }
+        public string DisplayName { get; set; }
 
         /// <summary>
         /// 获取或设置 发送方用户名
         /// </summary>
-        public string SenderUserName { get; set; }
+        public string UserName { get; set; }
 
         /// <summary>
         /// 获取或设置 发送方密码
         /// </summary>
-        public string SenderPassword { get; set; }
+        public string Password { get; set; }
     }
 }

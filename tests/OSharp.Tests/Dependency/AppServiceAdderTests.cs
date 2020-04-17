@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
-using Microsoft.Extensions.DependencyInjection;
+﻿using Microsoft.Extensions.DependencyInjection;
 
 using Xunit;
 
@@ -14,16 +10,16 @@ namespace OSharp.Dependency.Tests
         [Fact]
         public void Ctor_Test()
         {
-            IAppServiceAdder adder = new AppServiceAdder();
+            DependencyPack pack = new DependencyPack();
             IServiceCollection services = new ServiceCollection();
-            services = adder.AddServices(services);
+            services = pack.AddServices(services);
 
         }
 
         [IgnoreDependency]
-        private interface IIgoreContract { }
+        private interface IIgnoreContract { }
 
-        private interface ITestContract : IIgoreContract { }
+        private interface ITestContract : IIgnoreContract { }
 
         private class TransientTestService : ITestContract, ITransientDependency { }
 

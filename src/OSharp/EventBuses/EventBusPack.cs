@@ -8,8 +8,10 @@
 // -----------------------------------------------------------------------
 
 using System;
+using System.ComponentModel;
 
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 using OSharp.Core.Packs;
 using OSharp.EventBuses.Internal;
@@ -20,6 +22,7 @@ namespace OSharp.EventBuses
     /// <summary>
     /// 事件总线模块
     /// </summary>
+    [Description("事件总线模块")]
     public class EventBusPack : OsharpPack
     {
         /// <summary>
@@ -30,7 +33,7 @@ namespace OSharp.EventBuses
         /// <summary>
         /// 获取 模块启动顺序，模块启动的顺序先按级别启动，级别内部再按此顺序启动
         /// </summary>
-        public override int Order => 1;
+        public override int Order => 2;
 
         /// <summary>
         /// 将模块服务添加到依赖注入服务容器中
@@ -39,20 +42,27 @@ namespace OSharp.EventBuses
         /// <returns></returns>
         public override IServiceCollection AddServices(IServiceCollection services)
         {
-            services.AddSingleton<IEventBus, PassThroughEventBus>();
-            services.AddSingleton<IEventSubscriber>(provider => provider.GetService<IEventBus>());
-            services.AddSingleton<IEventPublisher>(provider => provider.GetService<IEventBus>());
+            services.TryAddSingleton<IEventBusBuilder, EventBusBuilder>();
+            services.TryAddSingleton<IEventStore, InMemoryEventStore>();
+            services.TryAddSingleton<IEventBus, PassThroughEventBus>();
 
-            services.AddSingleton<IEventStore, InMemoryEventStore>();
-            services.AddSingleton<IEventBusBuilder, EventBusBuilder>();
+            IEventHandlerTypeFinder handlerTypeFinder =
+                services.GetOrAddTypeFinder<IEventHandlerTypeFinder>(assemblyFinder => new EventHandlerTypeFinder(assemblyFinder));
+            
+            //向服务容器注册所有事件处理器类型
+            //Type[] eventHandlerTypes = handlerTypeFinder.FindAll();
+            //foreach (Type handlerType in eventHandlerTypes)
+            //{
+            //    services.TryAddTransient(handlerType);
+            //}
 
             return services;
         }
 
         /// <summary>
-        /// 使用模块服务
+        /// 应用模块服务
         /// </summary>
-        /// <param name="provider"></param>
+        /// <param name="provider">服务提供者</param>
         public override void UsePack(IServiceProvider provider)
         {
             IEventBusBuilder builder = provider.GetService<IEventBusBuilder>();

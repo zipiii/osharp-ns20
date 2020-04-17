@@ -12,7 +12,6 @@ using System.Drawing;
 using System.Drawing.Imaging;
 using System.IO;
 
-using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Caching.Distributed;
 
 using OSharp.Data;
@@ -25,6 +24,7 @@ namespace OSharp.AspNetCore
     /// <summary>
     /// 验证码处理类
     /// </summary>
+    [Obsolete("使用IVerifyCodeService注入服务代替，此类将在1.0版本中移除")]
     public static class VerifyCodeHandler
     {
         private const string Separator = "#$#";
@@ -42,7 +42,6 @@ namespace OSharp.AspNetCore
             {
                 return false;
             }
-
             string key = $"{OsharpConstants.VerifyCodeKeyPrefix}_{id}";
             IDistributedCache cache = ServiceLocator.Instance.GetService<IDistributedCache>();
             bool flag = code.Equals(cache.GetString(key), StringComparison.OrdinalIgnoreCase);

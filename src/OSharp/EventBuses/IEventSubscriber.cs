@@ -8,10 +8,6 @@
 // -----------------------------------------------------------------------
 
 using System;
-using System.Linq;
-using System.Reflection;
-
-using OSharp.EventBuses.Internal;
 
 
 namespace OSharp.EventBuses
@@ -50,10 +46,10 @@ namespace OSharp.EventBuses
         void Subscribe(Type eventType, IEventHandler eventHandler);
 
         /// <summary>
-        /// 遍历程序集类型，自动订阅所有事件数据及其处理类型
+        /// 自动订阅所有事件数据及其处理类型
         /// </summary>
-        /// <param name="assembly">程序集</param>
-        void SubscribeAll(Assembly assembly);
+        /// <param name="eventHandlerTypes">事件处理器类型集合</param>
+        void SubscribeAll(Type[] eventHandlerTypes);
 
         /// <summary>
         /// 取消订阅指定事件数据的事件处理委托

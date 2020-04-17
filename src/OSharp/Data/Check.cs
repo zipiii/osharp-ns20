@@ -9,9 +9,12 @@
 
 using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 
+using OSharp.Entity;
 using OSharp.Properties;
 
 
@@ -20,6 +23,7 @@ namespace OSharp.Data
     /// <summary>
     /// 参数合法性检查类
     /// </summary>
+    [DebuggerStepThrough]
     public static class Check
     {
         /// <summary>
@@ -28,7 +32,7 @@ namespace OSharp.Data
         /// <typeparam name="TException">异常类型</typeparam>
         /// <param name="assertion">要验证的断言。</param>
         /// <param name="message">异常消息。</param>
-        private static void Require<TException>(bool assertion, string message)
+        public static void Required<TException>(bool assertion, string message)
             where TException : Exception
         {
             if (assertion)
@@ -55,7 +59,7 @@ namespace OSharp.Data
             {
                 throw new ArgumentNullException(nameof(assertionFunc));
             }
-            Require<Exception>(assertionFunc(value), message);
+            Required<Exception>(assertionFunc(value), message);
         }
 
         /// <summary>
@@ -72,7 +76,7 @@ namespace OSharp.Data
             {
                 throw new ArgumentNullException("assertionFunc");
             }
-            Require<TException>(assertionFunc(value), message);
+            Required<TException>(assertionFunc(value), message);
         }
 
         /// <summary>
@@ -83,7 +87,7 @@ namespace OSharp.Data
         /// <exception cref="ArgumentNullException"></exception>
         public static void NotNull<T>(T value, string paramName)
         {
-            Require<ArgumentNullException>(value != null, string.Format(Resources.ParameterCheck_NotNull, paramName));
+            Required<ArgumentNullException>(value != null, string.Format(Resources.ParameterCheck_NotNull, paramName));
         }
 
         /// <summary>
@@ -95,7 +99,7 @@ namespace OSharp.Data
         /// <exception cref="ArgumentException"></exception>
         public static void NotNullOrEmpty(string value, string paramName)
         {
-            Require<ArgumentException>(!string.IsNullOrEmpty(value), string.Format(Resources.ParameterCheck_NotNullOrEmpty_String, paramName));
+            Required<ArgumentException>(!string.IsNullOrEmpty(value), string.Format(Resources.ParameterCheck_NotNullOrEmpty_String, paramName));
         }
 
         /// <summary>
@@ -106,25 +110,34 @@ namespace OSharp.Data
         /// <exception cref="ArgumentException"></exception>
         public static void NotEmpty(Guid value, string paramName)
         {
-            Require<ArgumentException>(value != Guid.Empty, string.Format(Resources.ParameterCheck_NotEmpty_Guid, paramName));
+            Required<ArgumentException>(value != Guid.Empty, string.Format(Resources.ParameterCheck_NotEmpty_Guid, paramName));
         }
 
         /// <summary>
         /// 检查集合不能为空引用或空集合，否则抛出<see cref="ArgumentNullException"/>异常或<see cref="ArgumentException"/>异常。
         /// </summary>
         /// <typeparam name="T">集合项的类型。</typeparam>
-        /// <param name="collection"></param>
+        /// <param name="list"></param>
         /// <param name="paramName">参数名称。</param>
         /// <exception cref="ArgumentNullException"></exception>
         /// <exception cref="ArgumentException"></exception>
-        public static void NotNullOrEmpty<T>(IEnumerable<T> collection, string paramName)
+        public static void NotNullOrEmpty<T>(IReadOnlyList<T> list, string paramName)
         {
-            NotNull(collection, paramName);
-            Require<ArgumentException>(collection.Any(), string.Format(Resources.ParameterCheck_NotNullOrEmpty_Collection, paramName));
+            NotNull(list, paramName);
+            Required<ArgumentException>(list.Any(), string.Format(Resources.ParameterCheck_NotNullOrEmpty_Collection, paramName));
         }
 
         /// <summary>
-        /// 检查参数必须小于[或可等于，参数canEqual]指定值，否则抛出<see cref="ArgumentOutOfRangeException"/>异常。
+        /// 检查集合中没有包含值为null的项
+        /// </summary>
+        public static void HasNoNulls<T>(IReadOnlyList<T> list, string paramName)
+        {
+            NotNull(list, paramName);
+            Required<ArgumentException>(list.All(m => m != null), string.Format(Resources.ParameterCheck_NotContainsNull_Collection, paramName));
+        }
+
+        /// <summary>
+        /// 检查参数必须小于[或可等于，参数<paramref name="canEqual"/>]指定值，否则抛出<see cref="ArgumentOutOfRangeException"/>异常。
         /// </summary>
         /// <typeparam name="T">参数类型。</typeparam>
         /// <param name="value"></param>
@@ -136,11 +149,11 @@ namespace OSharp.Data
         {
             bool flag = canEqual ? value.CompareTo(target) <= 0 : value.CompareTo(target) < 0;
             string format = canEqual ? Resources.ParameterCheck_NotLessThanOrEqual : Resources.ParameterCheck_NotLessThan;
-            Require<ArgumentOutOfRangeException>(flag, string.Format(format, paramName, target));
+            Required<ArgumentOutOfRangeException>(flag, string.Format(format, paramName, target));
         }
 
         /// <summary>
-        /// 检查参数必须大于[或可等于，参数canEqual]指定值，否则抛出<see cref="ArgumentOutOfRangeException"/>异常。
+        /// 检查参数必须大于[或可等于，参数<paramref name="canEqual"/>]指定值，否则抛出<see cref="ArgumentOutOfRangeException"/>异常。
         /// </summary>
         /// <typeparam name="T">参数类型。</typeparam>
         /// <param name="value"></param>
@@ -152,7 +165,7 @@ namespace OSharp.Data
         {
             bool flag = canEqual ? value.CompareTo(target) >= 0 : value.CompareTo(target) > 0;
             string format = canEqual ? Resources.ParameterCheck_NotGreaterThanOrEqual : Resources.ParameterCheck_NotGreaterThan;
-            Require<ArgumentOutOfRangeException>(flag, string.Format(format, paramName, target));
+            Required<ArgumentOutOfRangeException>(flag, string.Format(format, paramName, target));
         }
 
         /// <summary>
@@ -173,13 +186,13 @@ namespace OSharp.Data
             string message = startEqual
                 ? string.Format(Resources.ParameterCheck_Between, paramName, start, end)
                 : string.Format(Resources.ParameterCheck_BetweenNotEqual, paramName, start, end, start);
-            Require<ArgumentOutOfRangeException>(flag, message);
+            Required<ArgumentOutOfRangeException>(flag, message);
 
             flag = endEqual ? value.CompareTo(end) <= 0 : value.CompareTo(end) < 0;
             message = endEqual
                 ? string.Format(Resources.ParameterCheck_Between, paramName, start, end)
                 : string.Format(Resources.ParameterCheck_BetweenNotEqual, paramName, start, end, end);
-            Require<ArgumentOutOfRangeException>(flag, message);
+            Required<ArgumentOutOfRangeException>(flag, message);
         }
 
         /// <summary>
@@ -192,7 +205,7 @@ namespace OSharp.Data
         public static void DirectoryExists(string directory, string paramName = null)
         {
             NotNull(directory, paramName);
-            Require<DirectoryNotFoundException>(Directory.Exists(directory), string.Format(Resources.ParameterCheck_DirectoryNotExists, directory));
+            Required<DirectoryNotFoundException>(Directory.Exists(directory), string.Format(Resources.ParameterCheck_DirectoryNotExists, directory));
         }
 
         /// <summary>
@@ -205,7 +218,28 @@ namespace OSharp.Data
         public static void FileExists(string filename, string paramName = null)
         {
             NotNull(filename, paramName);
-            Require<FileNotFoundException>(File.Exists(filename), string.Format(Resources.ParameterCheck_FileNotExists, filename));
+            Required<FileNotFoundException>(File.Exists(filename), string.Format(Resources.ParameterCheck_FileNotExists, filename));
+        }
+
+        /// <summary>
+        /// 检查<see cref="IInputDto{TKey}"/>各属性的合法性，否则抛出<see cref="ValidationException"/>异常
+        /// </summary>
+        public static void Validate<TKey>(IInputDto<TKey> dto, string paramName)
+        {
+            NotNull(dto, paramName);
+            dto.Validate();
+        }
+
+        /// <summary>
+        /// 检查<see cref="IInputDto{TKey}"/>各属性的合法性，否则抛出<see cref="ValidationException"/>异常
+        /// </summary>
+        public static void Validate<TInputDto, TKey>(TInputDto[] dtos, string paramName) where TInputDto : IInputDto<TKey>
+        {
+            NotNull(dtos, paramName);
+            foreach (TInputDto dto in dtos)
+            {
+                dto.Validate();
+            }
         }
     }
 }

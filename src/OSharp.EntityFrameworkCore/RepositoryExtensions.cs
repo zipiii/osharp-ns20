@@ -9,7 +9,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Linq.Expressions;
 using System.Threading.Tasks;
 
@@ -17,6 +16,7 @@ using Microsoft.EntityFrameworkCore;
 
 using OSharp.Exceptions;
 
+using Z.EntityFramework.Extensions;
 using Z.EntityFramework.Plus;
 
 
@@ -42,7 +42,7 @@ namespace OSharp.Entity
             where TEntity : class, IEntity<TKey>
             where TKey : IEquatable<TKey>
         {
-            return repository.TrackEntities.Where(predicate).Delete(interceptAction);
+            return repository.Query(predicate).Delete(interceptAction);
         }
 
         /// <summary>
@@ -60,7 +60,7 @@ namespace OSharp.Entity
             where TEntity : class, IEntity<TKey>
             where TKey : IEquatable<TKey>
         {
-            return await repository.TrackEntities.Where(predicate).DeleteAsync(interceptAction);
+            return await repository.Query(predicate).DeleteAsync(interceptAction);
         }
 
         /// <summary>
@@ -80,7 +80,7 @@ namespace OSharp.Entity
             where TEntity : class, IEntity<TKey>
             where TKey : IEquatable<TKey>
         {
-            return repository.TrackEntities.Where(predicate).Update(updateExpression, interceptAction);
+            return repository.Query(predicate).Update(updateExpression, interceptAction);
         }
 
         /// <summary>
@@ -100,7 +100,7 @@ namespace OSharp.Entity
             where TEntity : class, IEntity<TKey>
             where TKey : IEquatable<TKey>
         {
-            return await repository.TrackEntities.Where(predicate).UpdateAsync(updateExpression, interceptAction);
+            return await repository.Query(predicate).UpdateAsync(updateExpression, interceptAction);
         }
 
         /// <summary>
@@ -116,7 +116,8 @@ namespace OSharp.Entity
             {
                 throw new OsharpException($"参数dbContext类型为“{dbContext.GetType()}”，不能转换为 DbContext");
             }
-            return context.Set<TEntity>().FromSql(new RawSqlString(sql), parameters);
+
+            return context.Set<TEntity>().FromSqlRaw(sql, parameters);
         }
     }
 }

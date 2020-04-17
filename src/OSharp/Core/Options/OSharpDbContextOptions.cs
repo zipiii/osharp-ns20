@@ -17,13 +17,14 @@ namespace OSharp.Core.Options
     /// <summary>
     /// 数据上下文配置节点
     /// </summary>
-    public class OSharpDbContextOptions
+    public class OsharpDbContextOptions
     {
         /// <summary>
-        /// 初始化一个<see cref="OSharpDbContextOptions"/>类型的新实例
+        /// 初始化一个<see cref="OsharpDbContextOptions"/>类型的新实例
         /// </summary>
-        public OSharpDbContextOptions()
+        public OsharpDbContextOptions()
         {
+            LazyLoadingProxiesEnabled = false;
             AuditEntityEnabled = false;
             AutoMigrationEnabled = false;
         }
@@ -47,6 +48,11 @@ namespace OSharp.Core.Options
         /// 获取或设置 数据库类型
         /// </summary>
         public DatabaseType DatabaseType { get; set; }
+
+        /// <summary>
+        /// 获取或设置 是否启用延迟加载代理
+        /// </summary>
+        public bool LazyLoadingProxiesEnabled { get; set; }
 
         /// <summary>
         /// 获取或设置 是否允许审计实体

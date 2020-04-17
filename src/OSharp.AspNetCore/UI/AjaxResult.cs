@@ -7,6 +7,9 @@
 //  <last-date>2017-09-01 20:38</last-date>
 // -----------------------------------------------------------------------
 
+using OSharp.Data;
+
+
 namespace OSharp.AspNetCore.UI
 {
     /// <summary>
@@ -56,7 +59,7 @@ namespace OSharp.AspNetCore.UI
         /// <summary>
         /// 是否成功
         /// </summary>
-        public bool Successed()
+        public bool Succeeded()
         {
             return Type == AjaxResultType.Success;
         }
@@ -72,7 +75,7 @@ namespace OSharp.AspNetCore.UI
         /// <summary>
         /// 成功的AjaxResult
         /// </summary>
-        public static AjaxResult Success(object data)
+        public static AjaxResult Success(object data = null)
         {
             return new AjaxResult("操作执行成功", AjaxResultType.Success, data);
         }
